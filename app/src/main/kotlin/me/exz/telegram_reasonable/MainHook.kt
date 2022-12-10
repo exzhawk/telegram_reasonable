@@ -2,14 +2,11 @@ package me.exz.telegram_reasonable
 
 import android.util.Log
 import android.view.View
-import androidx.recyclerview.widget.RecyclerView
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
-import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
-import java.lang.reflect.Field
 
 class MainHook : IXposedHookLoadPackage {
     private val TAG = "telegram_reasonable"
@@ -24,6 +21,14 @@ class MainHook : IXposedHookLoadPackage {
         }
     }
 
+    /**
+     * no chat list swipe gesture
+     *
+     * effect: chat list swipe gesture will show action icon but do nothing.
+     *
+     * you may select chat list swipe gesture for normal chat,
+     * but swipe on archived chat always unarchive it and there is no easy undo.
+     */
     private fun hookSwipe(lpparam: XC_LoadPackage.LoadPackageParam) {
         val hookClass =
             lpparam.classLoader.loadClass("org.telegram.ui.DialogsActivity\$SwipeController")
@@ -35,7 +40,7 @@ class MainHook : IXposedHookLoadPackage {
             "androidx.recyclerview.widget.RecyclerView\$ViewHolder",
             object : XC_MethodReplacement() {
                 override fun replaceHookedMethod(param: MethodHookParam): Float {
-                    Log.i(TAG, "no swipe")
+                    Log.i(TAG, "no chat list swipe gesture")
                     return 1.01f
                 }
             }
@@ -46,13 +51,21 @@ class MainHook : IXposedHookLoadPackage {
             Float::class.java,
             object : XC_MethodReplacement() {
                 override fun replaceHookedMethod(param: MethodHookParam): Float {
-                    Log.i(TAG, "no swipe")
+                    Log.i(TAG, "no chat list swipe gesture")
                     return Float.MAX_VALUE
                 }
             }
         )
     }
 
+    /**
+     * no unmute button in channel
+     *
+     * effect: make unmute button unusable.
+     *
+     * that big unmute button is easy to tap accidentally,
+     * and re-mute is inconvenient.
+     */
     private fun hookUnmute(lpparam: XC_LoadPackage.LoadPackageParam) {
         val hookClass = lpparam.classLoader.loadClass("org.telegram.ui.ChatActivity") ?: return
         Log.i(TAG, "found chat activity")
@@ -65,13 +78,22 @@ class MainHook : IXposedHookLoadPackage {
                     bottomOverlayChatTextField.get(param.thisObject) as? View
                 if (bottomOverlayChatText != null) {
                     if (bottomOverlayChatText.contentDescription == "UNMUTE") {
-                        Log.i(TAG, "no unmute")
+                        Log.i(TAG, "no unmute button in channel")
                         bottomOverlayChatText.visibility = View.INVISIBLE
                     }
                 }
             }
         })
     }
+
+    /**
+     * no double tap quick reaction
+     *
+     * effect: make double tap do nothing. (but still considered as a single tap)
+     *
+     * double tap quick reaction is easy to trigger accidentally,
+     * and send unnecessary notification to other user
+     */
 
     private fun hookDoubleTap(lpparam: XC_LoadPackage.LoadPackageParam) {
         val hookClass = lpparam.classLoader.loadClass("org.telegram.ui.ChatActivity$10") ?: return
@@ -83,8 +105,8 @@ class MainHook : IXposedHookLoadPackage {
             Int::class.java,
             object : XC_MethodReplacement() {
                 override fun replaceHookedMethod(param: MethodHookParam): Boolean {
-                    Log.i(TAG, "no double tap")
-                    return false;
+                    Log.i(TAG, "no double tap quick reaction")
+                    return false
                 }
             })
     }
