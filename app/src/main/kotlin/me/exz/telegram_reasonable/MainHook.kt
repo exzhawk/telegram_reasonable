@@ -96,7 +96,7 @@ class MainHook : IXposedHookLoadPackage {
      */
 
     private fun hookDoubleTap(lpparam: XC_LoadPackage.LoadPackageParam) {
-        val hookClass = lpparam.classLoader.loadClass("org.telegram.ui.ChatActivity$10") ?: return
+        val hookClass = lpparam.classLoader.loadClass("org.telegram.ui.ChatActivity$12") ?: return
         Log.i(TAG, "found chat activity")
         XposedHelpers.findAndHookMethod(
             hookClass,
