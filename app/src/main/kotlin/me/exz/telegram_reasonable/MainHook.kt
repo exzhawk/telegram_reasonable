@@ -6,18 +6,19 @@ import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage
+import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
 
 class MainHook : IXposedHookLoadPackage {
     private val TAG = "telegram_reasonable"
 
     private val packageName = "org.telegram.messenger"
 
-    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+    override fun handleLoadPackage(lpparam: LoadPackageParam) {
         if (packageName == lpparam.packageName) {
             hookUnmute(lpparam)
             hookSwipe(lpparam)
             hookDoubleTap(lpparam)
+            hookPullNext(lpparam)
         }
     }
 
@@ -29,7 +30,7 @@ class MainHook : IXposedHookLoadPackage {
      * you may select chat list swipe gesture for normal chat,
      * but swipe on archived chat always unarchive it and there is no easy undo.
      */
-    private fun hookSwipe(lpparam: XC_LoadPackage.LoadPackageParam) {
+    private fun hookSwipe(lpparam: LoadPackageParam) {
         val hookClass =
             lpparam.classLoader.loadClass("org.telegram.ui.DialogsActivity\$SwipeController")
                 ?: return
@@ -66,7 +67,7 @@ class MainHook : IXposedHookLoadPackage {
      * that big unmute button is easy to tap accidentally,
      * and re-mute is inconvenient.
      */
-    private fun hookUnmute(lpparam: XC_LoadPackage.LoadPackageParam) {
+    private fun hookUnmute(lpparam: LoadPackageParam) {
         val hookClass = lpparam.classLoader.loadClass("org.telegram.ui.ChatActivity") ?: return
         Log.i(TAG, "found chat activity")
         XposedHelpers.findAndHookMethod(hookClass, "updateBottomOverlay", object : XC_MethodHook() {
@@ -95,7 +96,7 @@ class MainHook : IXposedHookLoadPackage {
      * and send unnecessary notification to other user
      */
 
-    private fun hookDoubleTap(lpparam: XC_LoadPackage.LoadPackageParam) {
+    private fun hookDoubleTap(lpparam: LoadPackageParam) {
         val hookClass = lpparam.classLoader.loadClass("org.telegram.ui.ChatActivity$12") ?: return
         Log.i(TAG, "found chat activity")
         XposedHelpers.findAndHookMethod(
@@ -107,6 +108,29 @@ class MainHook : IXposedHookLoadPackage {
                 override fun replaceHookedMethod(param: MethodHookParam): Boolean {
                     Log.i(TAG, "no double tap quick reaction")
                     return false
+                }
+            })
+    }
+
+    /**
+     * no pull up to go to the next channel
+     */
+    private fun hookPullNext(lpparam: LoadPackageParam) {
+        val hookClass =
+            lpparam.classLoader.loadClass("org.telegram.ui.ChatPullingDownDrawable") ?: return
+        Log.i(TAG, "found ChatPullingDownDrawable activity")
+        XposedHelpers.findAndHookMethod(
+            hookClass,
+            "getNextUnreadDialog",
+            Long::class.java,
+            Int::class.java,
+            Int::class.java,
+            Boolean::class.java,
+            IntArray::class.java,
+            object : XC_MethodReplacement() {
+                override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                    Log.i(TAG, "no pull next")
+                    return null
                 }
             })
     }
